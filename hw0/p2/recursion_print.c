@@ -3,10 +3,11 @@
 
 void print_cartesian(int** arrs, const int arr_len, int* arr_lens, int* index, int depth);
 void print_repeated_combination(int* arr, int arr_size, int k);
+void print_combination(int* arr, int arr_size, int k);
 
 int main(void) {
   int a[2] = {1, 2};
-  int b[4] = {1, 2, 3, 4};
+  int b[5] = {1, 2, 3, 4, 5};
   int c[2] = {1, 2};
   int d[3] = {1, 3};
 
@@ -19,9 +20,33 @@ int main(void) {
 
   const int arr_size = sizeof(b) / sizeof(int);
   int k = 3;
-  print_repeated_combination(b, arr_size, k);
+  print_combination(b, arr_size, k);
 
   return 0;
+}
+
+void _print_combination(int* arr, int arr_size, int k, int* index, int depth, int start) {
+  if (depth == k) {
+    int i;
+    for (i = 0; i < k; i++) {
+      printf("%d ", arr[index[i]]);
+    }
+    printf("\n");
+  } else {
+    int i;
+    for (i = start; i < arr_size; i++) {
+      index[depth] = i;
+      _print_combination(arr, arr_size, k, index, depth + 1, i + 1);
+    }
+  }
+}
+
+void print_combination(int* arr, int arr_size, int k) {
+  int* index = (int*)calloc(k, sizeof(int));
+  int depth = 0;
+  int start = 0;
+  _print_combination(arr, arr_size, k, index, depth, start);
+  free(index);
 }
 
 void _print_repeated(int* arr, int arr_size, int k, int* index, int depth) {
