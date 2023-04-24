@@ -91,11 +91,22 @@ int max(int a, int b) {
   return (a > b) ? a : b;
 }
 
+int abs(int a) {
+  return (a > 0) ? a : -a;
+}
+
 int height(Node* node) {
   if (node == NULL) {
       return 0;
   }
   return node->height;
+}
+
+int num_nodes(Node* node) {
+  if (node == NULL) {
+      return 0;
+  }
+  return node->num_nodes;
 }
 
 void free_tree(Node* node) {
@@ -123,7 +134,81 @@ Node* find_max_descendent(Node* node) {
   return cur;
 }
 
-// NOTE: not AVL tree insert yet
+// AVL tree rotations
+Node* rotate_right(AVLTree* tree, Node* node) {
+  Node* left = node->left;
+  Node* left_right = left->right;
+  left->parent = node->parent;
+  if (node->parent) {
+    if (node->parent->left && node->parent->left->key == node->key) {
+      node->parent->left = left;
+    } else {
+      node->parent->right = left;
+    }
+  }
+  left->right = node; node->parent = left;
+  node->left = left_right; if (left_right) left_right->parent = node;
+  node->height = max(height(node->left), height(node->right)) + 1;
+  left->height = max(height(left->left), height(left->right)) + 1;
+  node->num_nodes = num_nodes(node->left) + num_nodes(node->right) + 1;
+  left->num_nodes = num_nodes(left->left) + num_nodes(left->right) + 1;
+  // update root if necessary
+  if (tree->root->key == node->key) {
+    tree->root = left;
+  }
+  return left;
+}
+
+Node* rotate_left(AVLTree* tree, Node* node) {
+  Node* right = node->right;
+  Node* right_left = right->left;
+  right->parent = node->parent;
+  if (node->parent) {
+    if (node->parent->left && node->parent->left->key == node->key) {
+      node->parent->left = right;
+    } else {
+      node->parent->right = right;
+    }
+  }
+  right->left = node; node->parent = right;
+  node->right = right_left; if (right_left) right_left->parent = node;
+  node->height = max(height(node->left), height(node->right)) + 1;
+  right->height = max(height(right->left), height(right->right)) + 1;
+  node->num_nodes = num_nodes(node->left) + num_nodes(node->right) + 1;
+  right->num_nodes = num_nodes(right->left) + num_nodes(right->right) + 1;
+  // update root if necessary
+  if (tree->root->key == node->key) {
+    tree->root = right;
+  }
+  return right;
+}
+
+void update_height(AVLTree* tree, Node* node) {
+  if (node == NULL) return;
+  while (node->parent) {
+    node = node->parent;
+    node->height = max(height(node->left), height(node->right)) + 1;
+    if (abs(height(node->left) - height(node->right)) > 1) {
+      // rotate to balance
+      if (height(node->left) > height(node->right)) {
+        if (height(node->left->left) >= height(node->left->right)) {
+          node = rotate_right(tree, node);
+        } else {
+          rotate_left(tree, node->left);
+          node = rotate_right(tree, node);
+        }
+      } else {
+        if (height(node->right->right) >= height(node->right->left)) {
+          node = rotate_left(tree, node);
+        } else {
+          rotate_right(tree, node->right);
+          node = rotate_left(tree, node);
+        }
+      }
+    }
+  }
+}
+
 void insert(AVLTree* tree, Node* node) {
   if (tree->root == NULL) {
     tree->root = node;
@@ -135,6 +220,7 @@ void insert(AVLTree* tree, Node* node) {
         if (cur->left == NULL) {
           cur->left = node;
           node->parent = cur;
+          update_height(tree, node);
           break;
         } else {
           cur = cur->left;
@@ -144,6 +230,7 @@ void insert(AVLTree* tree, Node* node) {
         if (cur->right == NULL) {
           cur->right = node;
           node->parent = cur;
+          update_height(tree, node);
           break;
         } else {
           cur = cur->right;
@@ -174,10 +261,12 @@ void remove_node(AVLTree* tree, Node* node) {
   // remove the node
   if (cur->left && cur->right) {
     Node* succ = find_min_descendent(cur->right);
+    Node* succ_parent = succ->parent;
     // connect succ's parent with succ's right child if necessary
     if (succ->parent->key != cur->key) {
       succ->parent->left = succ->right;
       if (succ->right) succ->right->parent = succ->parent;
+      // update_height(tree, succ);
     }
     // reset the number of nodes from succ up to cur
     Node* tmp = succ;
@@ -189,15 +278,17 @@ void remove_node(AVLTree* tree, Node* node) {
     succ->parent = (parent->key != INT_MIN) ? parent : NULL;
     succ->left = cur->left; cur->left->parent = succ;
     succ->right = (cur->right->key != succ->key) ? cur->right : succ->right; if (cur->right->key != succ->key) cur->right->parent = succ;
-    // TODO: handle height
+    succ->height = max(height(succ->left), height(succ->right)) + 1;
     succ->num_nodes = cur->num_nodes;
     if (parent->left && parent->left->key == cur->key) {
       parent->left = succ;
     } else if (parent->right && parent->right->key == cur->key) {
       parent->right = succ;
     } else { // XXX: remove this debugging line
-      printf("ERROR: remove(): parent->left->key = %d, parent->right->key = %d, cur->key = %d\n", parent->left->key, parent->right->key, cur->key);
+      printf("ERROR: remove() 1: parent->left->key = %d, parent->right->key = %d, cur->key = %d\n", parent->left->key, parent->right->key, cur->key);
     }
+    succ_parent->height = max(height(succ_parent->left), height(succ_parent->right)) + 1;
+    update_height(tree, succ_parent);
   } else if (cur->left) {
     cur->left->parent = (parent->key != INT_MIN) ? parent : NULL;
     if (parent->left && parent->left->key == cur->key) {
@@ -205,8 +296,9 @@ void remove_node(AVLTree* tree, Node* node) {
     } else if (parent->right && parent->right->key == cur->key) {
       parent->right = cur->left;
     } else { // XXX: remove this debugging line
-      printf("ERROR: remove(): parent->left->key = %d, parent->right->key = %d, cur->key = %d\n", parent->left->key, parent->right->key, cur->key);
+      printf("ERROR: remove() 2: parent->left->key = %d, parent->right->key = %d, cur->key = %d\n", parent->left->key, parent->right->key, cur->key);
     }
+    update_height(tree, cur);
   } else if (cur->right) {
     cur->right->parent = (parent->key != INT_MIN) ? parent : NULL;
     if (parent->left && parent->left->key == cur->key) {
@@ -214,16 +306,18 @@ void remove_node(AVLTree* tree, Node* node) {
     } else if (parent->right && parent->right->key == cur->key) {
       parent->right = cur->right;
     } else { // XXX: remove this debugging line
-      printf("ERROR: remove(): parent->left->key = %d, parent->right->key = %d, cur->key = %d\n", parent->left->key, parent->right->key, cur->key);
+      printf("ERROR: remove() 3: parent->left->key = %d, parent->right->key = %d, cur->key = %d\n", parent->left->key, parent->right->key, cur->key);
     }
+    update_height(tree, cur);
   } else {
     if (parent->left && parent->left->key == cur->key) {
       parent->left = NULL;
     } else if (parent->right && parent->right->key == cur->key) {
       parent->right = NULL;
     } else { // XXX: remove this debugging line
-      printf("ERROR: remove(): parent->left->key = %d, parent->right->key = %d, cur->key = %d\n", parent->left->key, parent->right->key, cur->key);
+      printf("ERROR: remove() 4: parent->left->key = %d, parent->right->key = %d, cur->key = %d\n", parent->left->key, parent->right->key, cur->key);
     }
+    update_height(tree, cur);
   }
 
   // reset root if necessary
@@ -299,7 +393,7 @@ void print_bst(Node* node, int level) {
   for (i = 0; i < level; i++) {
     printf("  ");
   }
-  printf("%d (num_nodes: %d)", node->key, node->num_nodes);
+  printf("%d (num_nodes: %d, height: %d)", node->key, node->num_nodes, node->height);
   if (node->bst.root) {
     printf(" BST of color %d\n", node->key);
     print_bst(node->bst.root, level + 1);
@@ -350,6 +444,7 @@ int main(void) {
   }
 
   // // XXX: for debugging
+  // printf("After initial insertion:\n");
   // print_keys(nodes, N);
   // print_keys(nodes_2, N);
   // print_bst(gbst.root, 0);
@@ -415,6 +510,12 @@ int main(void) {
     } else {
       printf("ERROR: unknown operation %d\n", op);
     }
+
+    // printf("After step %d:\n", i);
+    // print_keys(nodes, N);
+    // print_keys(nodes_2, N);
+    // print_bst(gbst.root, 0);
+    // print_bst(cbst.root, 0);
   }
 
   // // XXX: for debugging
@@ -430,5 +531,4 @@ int main(void) {
 
   return 0;
 }
-// 4th attempt
-
+// 6th attempt
