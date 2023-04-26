@@ -183,6 +183,13 @@ Node* rotate_left(AVLTree* tree, Node* node) {
   return right;
 }
 
+Node* walk_to_root(Node* node) {
+  while (node->parent) {
+    node = node->parent;
+  }
+  return node;
+}
+
 void update_height(AVLTree* tree, Node* node) {
   if (node == NULL) return;
   while (node->parent) {
@@ -243,7 +250,7 @@ void insert(AVLTree* tree, Node* node) {
   }
 }
 
-void remove_node(AVLTree* tree, Node* node) {
+void remove_node(AVLTree* tree, Node* node) { // printf("Removing node %d...\n", node->key);
   Node* cur = tree->root;
   while (node->key != cur->key) {
     if (node->key < cur->key) {
@@ -259,7 +266,7 @@ void remove_node(AVLTree* tree, Node* node) {
   if (cur->parent) parent = cur->parent;
     
   // remove the node
-  if (cur->left && cur->right) {
+  if (cur->left && cur->right) { // printf("Case 1: node %d has two children\n", cur->key);
     Node* succ = find_min_descendent(cur->right);
     Node* succ_parent = succ->parent;
     // connect succ's parent with succ's right child if necessary
@@ -289,7 +296,7 @@ void remove_node(AVLTree* tree, Node* node) {
     }
     succ_parent->height = max(height(succ_parent->left), height(succ_parent->right)) + 1;
     update_height(tree, succ_parent);
-  } else if (cur->left) {
+  } else if (cur->left) { // printf("Case 2: node %d has one left child\n", cur->key);
     cur->left->parent = (parent->key != INT_MIN) ? parent : NULL;
     if (parent->left && parent->left->key == cur->key) {
       parent->left = cur->left;
@@ -299,7 +306,7 @@ void remove_node(AVLTree* tree, Node* node) {
       printf("ERROR: remove() 2: parent->left->key = %d, parent->right->key = %d, cur->key = %d\n", parent->left->key, parent->right->key, cur->key);
     }
     update_height(tree, cur);
-  } else if (cur->right) {
+  } else if (cur->right) { // printf("Case 3: node %d has one right child\n", cur->key);
     cur->right->parent = (parent->key != INT_MIN) ? parent : NULL;
     if (parent->left && parent->left->key == cur->key) {
       parent->left = cur->right;
@@ -309,7 +316,7 @@ void remove_node(AVLTree* tree, Node* node) {
       printf("ERROR: remove() 3: parent->left->key = %d, parent->right->key = %d, cur->key = %d\n", parent->left->key, parent->right->key, cur->key);
     }
     update_height(tree, cur);
-  } else {
+  } else { // printf("Case 4: node %d has no child\n", cur->key);
     if (parent->left && parent->left->key == cur->key) {
       parent->left = NULL;
     } else if (parent->right && parent->right->key == cur->key) {
@@ -318,15 +325,15 @@ void remove_node(AVLTree* tree, Node* node) {
       printf("ERROR: remove() 4: parent->left->key = %d, parent->right->key = %d, cur->key = %d\n", parent->left->key, parent->right->key, cur->key);
     }
     update_height(tree, cur);
-  }
+  } // printf("Done removing node %d\n", node->key);
 
   // reset root if necessary
-  if (parent->key == INT_MIN) tree->root = parent->left;
+  if (parent->key == INT_MIN) { tree->root = parent->left ? walk_to_root(parent->left) : NULL; }
 
   // reset cur
-  cur->parent = NULL;
-  cur->left = NULL;
-  cur->right = NULL;
+  // cur->parent = NULL;
+  // cur->left = NULL;
+  // cur->right = NULL;
 }
 
 Node* find(AVLTree* tree, int key) {
@@ -450,7 +457,7 @@ int main(void) {
   // print_bst(gbst.root, 0);
   // print_bst(cbst.root, 0);
 
-  for (i = 1; i <= M; i++) {
+  for (i = 1; i <= M; i++) { // printf("Case #%d:\n", i);
     int op;
     scanf("%d", &op);
     if (op == QUESTION) {
@@ -470,11 +477,11 @@ int main(void) {
     } else if (op == SWAPPING) {
       int k;
       scanf("%d", &k);
-      Node* grdy = &nodes[k]; // the greedy cat
-      Node* succ = find_inorder_successor(&gbst, grdy);
-      Node* grdy_cnode = find(&cbst, cnodes[grdy->i].key);
-      Node* succ_cnode = find(&cbst, cnodes[succ->i].key);
-      if (succ) {
+      Node* grdy = &nodes[k]; // print_bst(gbst.root, 0); printf("Trying to swap %d\n", grdy->key);
+      Node* succ = find_inorder_successor(&gbst, grdy); //printf("Done finding inorder successor\n");
+      Node* grdy_cnode = find(&cbst, cnodes[grdy->i].key); //printf("Done finding color node of grdy\n");
+      Node* succ_cnode = find(&cbst, cnodes[succ->i].key); //printf("Done finding color node of succ\n");
+      if (succ) { // printf("Swapping %d and %d\n", grdy->key, succ->key);
         // remove grdy and succ from their BSTs
         remove_node(&gbst, grdy); remove_node(&gbst, succ);
         remove_node(&grdy_cnode->bst, &nodes_2[grdy->i]); remove_node(&succ_cnode->bst, &nodes_2[succ->i]);
@@ -531,4 +538,4 @@ int main(void) {
 
   return 0;
 }
-// 6th attempt
+// 8th attempt
