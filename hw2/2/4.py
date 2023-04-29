@@ -41,7 +41,7 @@ def count_valid_pairs_merge(kds: list[tuple[int]]) -> int:
                 tmp[p] = kds[rp]
                 rp += 1
                 p += 1
-            for i in range(len(kds)):
+            for i in range(l, r + 1):
                 kds[i] = tmp[i]
             l += w
         if w >= len(kds):
