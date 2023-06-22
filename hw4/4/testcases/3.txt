@@ -1,0 +1,17 @@
+2 14
+abc
+abc
+1 abc
+1 abc
+2 abc
+2 abc
+2 abc
+2 abc
+1 abc
+2 abc
+1 abc
+2 abc
+1 bca
+1 cab
+2 cab
+2 bca
